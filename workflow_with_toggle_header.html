@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Project Workflow - ToDo App (Vertical Interactive)</title>
+    <style>
+        :root {
+            --bg1: #f4f7fb;
+            --accent: #4a90e2;
+            --accent-2: #e67e22;
+            --muted: #7b8a93;
+            --card-bg: #ffffff;
+            --line-color: #dfe8f2;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Naskh Arabic";
+            background: linear-gradient(180deg, var(--bg1) 0%, #ffffff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #263238;
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1150px;
+        }
+
+        /* HEADER area */
+        .header {
+            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-top .title {
+            font-weight: 800;
+            font-size: 18px;
+        }
+
+        .header-top .hint {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .tab-btn {
+            background: #fff;
+            border: 1px solid #e6eefc;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            color: #263238;
+            box-shadow: 0 6px 14px rgba(74, 144, 226, 0.03);
+            transition: background .18s, color .18s, transform .12s;
+        }
+
+        .tab-btn:focus {
+            outline: 3px solid rgba(74, 144, 226, 0.12);
+            transform: translateY(-1px);
+        }
+
+        /* tab content area (hidden by default) */
+        .tab-contents {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(250, 250, 250, 0.98));
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 10px 28px rgba(20, 30, 40, 0.04);
+            display: none;
+        }
+
+        .tab-contents.visible {
+            display: block;
+        }
+
+        .tab-pane {
+            color: #21313a;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .tab-pane h4 {
+            margin: 6px 0 10px;
+            font-size: 16px;
+            color: #12202a;
+        }
+
+        .tab-pane ul {
+            margin: 8px 0 0 0;
+            padding-right: 18px;
+        }
+
+        .tab-pane li {
+            margin: 8px 0;
+            color: #2f4853;
+        }
+
+        /* hide all panes by default, show only the active one */
+        .tab-pane {
+            display: none;
+            color: #21313a;
+            line-height: 1.6;
+            font-size: 15px;
+            transition: opacity 260ms ease, transform 260ms ease;
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+
+        .tab-pane.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* keep wrapper hidden until a tab is opened */
+        .tab-contents {
+            display: none;
+        }
+
+        .tab-contents.visible {
+            display: block;
+        }
+
+
+        /* main container (existing) */
+        .container {
+            width: 100%;
+            height: 72vh;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(250, 250, 250, 0.95));
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(20, 30, 40, 0.06);
+            padding: 18px;
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 18px;
+        }
+
+        /* left column: timeline */
+        .timeline-wrap {
+            position: relative;
+            padding: 10px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            height: 100%;
+            overflow: auto;
+        }
+
+        /* vertical line */
+        .line {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 12px;
+            bottom: 12px;
+            width: 6px;
+            border-radius: 6px;
+            background: linear-gradient(to bottom, var(--line-color), transparent 40%);
+            z-index: 0;
+        }
+
+        .line .progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 0%;
+            background: linear-gradient(to bottom, var(--accent), var(--accent-2));
+            border-radius: 6px;
+            transition: height .45s cubic-bezier(.2, .9, .2, 1);
+            z-index: 1;
+            box-shadow: 0 6px 14px rgba(76, 141, 255, 0.12);
+        }
+
+        .step {
+            position: relative;
+            z-index: 2;
+            width: 240px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 6px;
+            transition: transform .25s ease, opacity .25s ease;
+            cursor: pointer;
+            background: transparent;
+            border-radius: 12px;
+        }
+
+        .step .dot {
+            min-width: 66px;
+            min-height: 66px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, var(--accent), #2f78c9);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 6px 18px rgba(74, 144, 226, 0.18);
+            transition: transform .25s, box-shadow .25s, background .25s;
+            flex-shrink: 0;
+        }
+
+        .step .dot svg {
+            width: 36px;
+            height: 36px
+        }
+
+        .step .meta {
+            text-align: right;
+        }
+
+        .step .meta .title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1f2b33;
+        }
+
+        .step .meta .sub {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        .step.inactive {
+            opacity: 0.55;
+            transform: scale(.98);
+        }
+
+        .step.active {
+            transform: translateX(-6px) scale(1.02);
+        }
+
+        .step.active .dot {
+            transform: scale(1.12);
+            background: linear-gradient(180deg, var(--accent-2), #d96a17);
+            box-shadow: 0 12px 30px rgba(230, 126, 34, 0.16);
+        }
+
+        /* right column: card */
+        .wall {
+            perspective: 1200px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+
+        .card {
+            width: 520px;
+            max-width: 100%;
+            min-height: 260px;
+            background: var(--card-bg);
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(40, 50, 60, 0.08);
+            padding: 18px;
+            transform-origin: left center;
+            transform: translateZ(-80px) translateX(20px) rotateY(-6deg) scale(.98);
+            transition: transform .6s cubic-bezier(.2, .9, .25, 1), opacity .45s;
+            opacity: 0.02;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .card.visible {
+            transform: translateZ(0px) translateX(0px) rotateY(0deg) scale(1);
+            opacity: 1;
+        }
+
+        .card .visual {
+            width: 170px;
+            height: 150px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #f6f9ff, #ffffff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 -6px 18px rgba(74, 144, 226, 0.03);
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card .visual img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .card .content {
+            flex: 1;
+            text-align: right;
+            padding-right: 4px;
+        }
+
+        .card h2 {
+            margin: 0 0 8px;
+            font-size: 20px;
+            color: #0f1720;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            background: linear-gradient(90deg, #f2f8ff, #ecf6ff);
+            color: var(--accent);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-weight: 700;
+            font-size: 13px;
+            box-shadow: 0 6px 14px rgba(74, 144, 226, 0.06);
+        }
+
+        .card p {
+            margin: 8px 0 14px;
+            color: #455a64;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .card .cta {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 6px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            padding: 9px 14px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 8px 18px rgba(74, 144, 226, 0.12);
+        }
+
+        .btn.secondary {
+            background: transparent;
+            border: 1px solid #e6eefc;
+            color: var(--muted);
+            box-shadow: none;
+            font-weight: 600;
+        }
+
+        /* controls at bottom */
+        .controls {
+            position: absolute;
+            left: 18px;
+            bottom: 14px;
+            right: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .controls .left {
+            pointer-events: auto;
+        }
+
+        .controls .keyboard-hint {
+            color: var(--muted);
+            font-size: 13px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .controls .buttons {
+            pointer-events: auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        .control-btn {
+            background: var(--accent);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 22px rgba(74, 144, 226, 0.12);
+        }
+
+        .control-btn.ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid #eef5ff;
+            box-shadow: none;
+        }
+
+        @media (max-width:980px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 12px;
+                height: auto
+            }
+
+            .timeline-wrap {
+                order: 2;
+                flex-direction: row;
+                gap: 12px;
+                overflow-x: auto;
+                padding: 12px
+            }
+
+            .line {
+                display: none
+            }
+
+            .card {
+                order: 1;
+                width: 100%
+            }
+
+            .step {
+                width: 180px
+            }
+
+            .card .visual {
+                display: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <!-- HEADER: tabs (hidden until toggled) -->
+        <div class="header" id="headerArea">
+            <div class="header-top">
+                <div class="title">عرضي التفاعلي: Project Workflow — مثال تطبيق ToDo</div>
+                <div class="hint">ملاحظة للمقدّم: سأستخدم اختصارات لوحة المفاتيح ↑ ↓ أو أزرار التالي/السابق أثناء العرض
+                </div>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="معلومات العرض">
+                <button class="tab-btn" data-tab="notes" aria-pressed="false">تعقيب / تذكير</button>
+                <button class="tab-btn" data-tab="keypoints" aria-pressed="false">ما يجب أن يفهمه الحضور</button>
+                <button class="tab-btn" data-tab="questions" aria-pressed="false">أسئلة للنقاش</button>
+                <button class="tab-btn" data-tab="conclusion" aria-pressed="false">الخاتمة</button>
+
+            </div>
+
+            <div class="tab-contents" id="tabContents" aria-hidden="true">
+                <div id="notes" class="tab-pane" role="region" aria-label="تعقيب وتذكير">
+                    <h4>💡 ملاحظة سريعة</h4>
+                    <p>
+                        يمكن إزالة الغموض والصعوبة التي يبدو عليها أي مشروع من خلال اتباع منهجية واضحة والاعتماد على خطة مفصلة لكل
+                        مرحلة.
+                        سأحرص على أن يكون كل شيء مرتب ومنظم أثناء العرض، وأوضح لكل أداة الهدف العملي منها وكيف تساهم في تسهيل إنجاز
+                        المشروع.
+                    </p>
+                </div>
+
+
+                <div id="keypoints" class="tab-pane" role="region" aria-label="نقاط يجب أن يفهمها الحضور">
+                    <h4>النقاط التي أريد أن تفهموها</h4>
+                    <ul>
+                        <li><strong>مراحل المشروع</strong>: سأتبع التسلسل التالي: Requirements → Design → Implementation
+                            →
+                            Testing → Deployment.</li>
+                        <li><strong>التبعيات</strong>: سأبيّن متى لا يمكن بدء مهمة قبل إكمال مهمة سابقة (dependencies).
+                        </li>
+                        <li><strong>Deliverables</strong>: سأوضح ما هي النواتج المتوقعة في نهاية كل مرحلة (مثل
+                            wireframes أو
+                            demo عملي أو تقرير اختبار).</li>
+                        <li><strong>اختيار الأدوات</strong>: سأشرح متى ولماذا أستخدم Lucidchart أو Figma أو Trello أثناء
+                            إدارة المشروع.</li>
+                        <li><strong>التواصل والمتابعة</strong>: سأوضّح كيف يساعد الـ workflow الفريق على معرفة مسؤوليات
+                            كل
+                            عضو والمهام المتبقية.</li>
+                    </ul>
+                </div>
+
+                <div id="questions" class="tab-pane" role="region" aria-label="أسئلة للنقاش">
+                    <h4>أسئلة سأطرحها بعد العرض</h4>
+                    <ul>
+                        <li>ما الفائدة الأساسية التي لاحظتموها من إعداد Project Workflow قبل البدء بالبرمجة؟</li>
+                        <li>من وجهة نظركم، أي أداة كانت الأنسب للمرحلة X ولماذا؟</li>
+                        <li>كيف يمكننا تحسين تنظيم البطاقات في Trello لتتناسب مع هذا الـ workflow؟</li>
+                        <li>ما المخاطر التي قد تواجه المشروع إذا لم نجري اختبارات كافية قبل الإطلاق؟</li>
+                        <li>كيف نحول متطلبات غير واضحة إلى Acceptance Criteria قابلة للاختبار؟</li>
+                    </ul>
+                </div>
+                <div id="conclusion" class="tab-pane" role="region" aria-label="الخاتمة">
+                    <h4>الخلاصة: من الفوضى إلى النظام</h4>
+                    <ul>
+                        <li><strong>تدفق العمل</strong> هو خريطتك للنجاح.</li>
+                        <li><strong>ابدأ بالبساطة</strong>: استخدم الرموز الأساسية لرسم عملياتك.</li>
+                        <li><strong>شارك فريقك</strong>: البناء الجماعي يضمن التزام الجميع.</li>
+                    </ul>
+                    <h4>الأسئلة</h4>
+                    <p>Questions?</p>
+                    <p><em>شكراً لحسن استماعكم.</em></p>
+                    <p>الموقع يمكن اعتباره مرجعًا أو نقطة بداية ممتازة.</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- MAIN container (timeline + card) -->
+        <div class="container" role="application" aria-label="Interactive Project Workflow">
+            <div class="timeline-wrap" id="timeline">
+                <div class="line" aria-hidden="true">
+                    <div class="progress" id="lineProgress"></div>
+                </div>
+                <!-- timeline steps injected by JS -->
+            </div>
+
+            <div class="wall">
+                <div class="card" id="card" aria-live="polite">
+                    <div class="visual" id="visual">
+                        <img src="" alt="" id="cardImage">
+                    </div>
+                    <div class="content">
+                        <h2 id="cardTitle"><span class="badge" id="cardBadge">المتطلبات</span></h2>
+                        <p id="cardText">سأعرض تفاصيل هذه المرحلة هنا. سؤال للجمهور: كيف سننفّذ هذه المرحلة عمليًا؟</p>
+                        <div class="cta">
+                            <a href="#" target="_blank" id="cardLink" class="btn">افتح الأداة</a>
+                            <a href="#" target="_blank" id="helpLink" class="btn secondary">🔎 المساعدة</a>
+                            <a class="btn secondary" id="learnMore" href="#" target="_blank">مزيد من الشرح</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- controls -->
+            <div class="controls" aria-hidden="false">
+                <div class="left keyboard-hint">
+                    <div>اختصارات العرض: <strong>سهم لأعلى ↑</strong> للرجوع — <strong>سهم لأسفل ↓</strong> للتقدم</div>
+                </div>
+                <div class="buttons">
+                    <button class="control-btn ghost" id="prevBtn">السابق ↑</button>
+                    <button class="control-btn" id="nextBtn">التالي ↓</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Header tabs toggle logic =====
+        (function () {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContentsWrap = document.getElementById('tabContents');
+
+            // track which tab is currently open (null = none)
+            let openTab = null;
+
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => toggleTab(btn));
+                btn.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTab(btn); }
+                });
+            });
+
+            function toggleTab(btn) {
+                const tabId = btn.dataset.tab;
+                const pane = document.getElementById(tabId);
+
+                // if this tab already open -> hide everything
+                if (openTab === tabId) {
+                    // hide
+                    pane.classList.remove('active');
+                    tabContentsWrap.classList.remove('visible');
+                    tabContentsWrap.setAttribute('aria-hidden', 'true');
+                    btn.setAttribute('aria-pressed', 'false');
+                    openTab = null;
+                    return;
+                }
+
+                // otherwise open this tab: hide others first
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                tabButtons.forEach(b => b.setAttribute('aria-pressed', 'false'));
+
+                pane.classList.add('active');
+                tabContentsWrap.classList.add('visible');
+                tabContentsWrap.setAttribute('aria-hidden', 'false');
+                btn.setAttribute('aria-pressed', 'true');
+                openTab = tabId;
+
+                // scroll pane into view (if header area taller than viewport)
+                pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        })();
+
+        // ===== Steps data and timeline logic (as before) =====
+        const steps = [
+            {
+                id: 'requirements',
+                badge: 'جمع المتطلبات',
+                title: '💡 جمع المتطلبات',
+                text: 'حدد ما يحتاجه المستخدم: إضافة مهمة، تعديلها، حذفها، عرض القائمة. اسأل: ما الحالات الحقيقية التي يستخدم فيها التطبيق؟',
+                img: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect fill="%23f7fcff" width="100%" height="100%"/><g transform="translate(40,30)"><rect rx="12" ry="12" width="520" height="340" fill="%23ffffff" stroke="%23e6f0ff"/><text x="260" y="200" font-size="28" text-anchor="middle" fill="%234a90e2" font-family="Arial">Requirements</text></g></svg>',
+                link: 'https://lucid.app/',
+                more: 'https://help.lucid.co/hc/en-us/articles/16300314888724-Create-a-flowchart-in-Lucidchart',
+                help: 'https://help.lucid.co/hc/en-us/articles/16300314888724-Create-a-flowchart-in-Lucidchart?utm_source=chatgpt.com'
+            },
+            {
+                id: 'design',
+                badge: 'تصميم الواجهة',
+                title: '🎨 تصميم UI/UX',
+                text: 'صمم شاشتين رئيسيتين: شاشة إدخال مهمة وشاشة عرض المهام. فكر في تجربة المستخدم وبساطة الإدخال.',
+                img: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect fill="%23fffaf6" width="100%" height="100%"/><g transform="translate(40,30)"><rect rx="12" ry="12" width="520" height="340" fill="%23fff" stroke="%23fde6d6"/><text x="260" y="200" font-size="28" text-anchor="middle" fill="%23e67e22" font-family="Arial">Design</text></g></svg>',
+                link: 'https://www.figma.com/',
+                more: 'https://www.figma.com/community',
+                help: 'https://help.figma.com/hc/en-us/articles/360039823154-Get-started-in-Figma'
+            },
+            {
+                id: 'implementation',
+                badge: 'البرمجة',
+                title: '🛠️ البرمجة (Implementation)',
+                text: 'أنشئ قاعدة بيانات محلية (SQLite) وطبق وظائف CRUD: Create, Read, Update, Delete. وثّق الكود لسهولة الصيانة.',
+                img: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect fill="%23f7fff8" width="100%" height="100%"/><g transform="translate(40,30)"><rect rx="12" ry="12" width="520" height="340" fill="%23ffffff" stroke="%23e8f9ee"/><g transform="translate(120,70)"><rect width="360" height="200" rx="14" fill="%2321273a"/><rect x="18" y="18" width="324" height="164" rx="10" fill="%230f1720" opacity="0.12"/><text x="180" y="110" font-size="72" text-anchor="middle" fill="%23a8ffb1" font-family="Arial" font-weight="700">&lt;/&gt;</text></g><rect x="170" y="290" width="260" height="16" rx="8" fill="%23dbeef0"/></g></svg>',
+                link: 'https://replit.com/',
+                more: 'https://www.sqlite.org/index.html',
+                help: 'https://docs.replit.com/'
+            },
+            {
+                id: 'testing',
+                badge: 'الاختبار',
+                title: '✅ الاختبار (Testing)',
+                text: 'اختبر حالات الاستخدام: إضافة، تعديل، حذف، واسترجاع البيانات بعد إعادة تشغيل التطبيق. سجّل الأخطاء وأعد المحاولة.',
+                img: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect fill="%23fffafc" width="100%" height="100%"/><g transform="translate(40,30)"><rect rx="12" ry="12" width="520" height="340" fill="%23fff" stroke="%23f7e9f7"/><text x="260" y="200" font-size="28" text-anchor="middle" fill="%238e44ad" font-family="Arial">Test</text></g></svg>',
+                link: 'https://www.selenium.dev/',
+                more: 'https://playwright.dev/',
+                help: 'https://www.selenium.dev/documentation/'
+            },
+            {
+                id: 'deploy',
+                badge: 'الإطلاق',
+                title: '🚀 الإطلاق (Deployment)',
+                text: 'سلم التطبيق للمستخدم: تركيب على جهاز فعلي أو رفع APK/Bundle، وتابع الأداء وملاحظات المستخدمين.',
+                img: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect fill="%23fffaf0" width="100%" height="100%"/><g transform="translate(40,30)"><rect rx="12" ry="12" width="520" height="340" fill="%23fff" stroke="%23fff0e0"/><text x="260" y="200" font-size="28" text-anchor="middle" fill="%23f39c12" font-family="Arial">Deploy</text></g></svg>',
+                link: 'https://vercel.com/',
+                more: 'https://play.google.com/console/',
+                help: 'https://vercel.com/docs'
+            }
+        ];
+
+        const timeline = document.getElementById('timeline');
+        const card = document.getElementById('card');
+        const cardTitle = document.getElementById('cardTitle');
+        const cardText = document.getElementById('cardText');
+        const cardImage = document.getElementById('cardImage');
+        const cardLink = document.getElementById('cardLink');
+        const learnMore = document.getElementById('learnMore');
+        const lineProgress = document.getElementById('lineProgress');
+
+        let currentIndex = 0;
+
+        // build timeline items
+        steps.forEach((s, i) => {
+            const stepEl = document.createElement('div');
+            stepEl.className = 'step ' + (i === 0 ? 'active' : 'inactive');
+            stepEl.dataset.index = i;
+            stepEl.tabIndex = 0;
+            stepEl.setAttribute('role', 'button');
+            stepEl.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+
+            stepEl.innerHTML = `
+        <div class="dot" aria-hidden="true">
+          ${getDotSVG(i)}
+        </div>
+        <div class="meta">
+          <div class="title">${s.badge}</div>
+          <div class="sub">${truncate(s.text, 60)}</div>
+        </div>
+      `;
+            stepEl.addEventListener('click', () => activate(i));
+            stepEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(i); }
+            });
+
+            timeline.appendChild(stepEl);
+        });
+
+        // initial display
+        updateCard(0);
+        updateLineProgress();
+
+        // controls
+        document.getElementById('nextBtn').addEventListener('click', next);
+        document.getElementById('prevBtn').addEventListener('click', prev);
+
+        // keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') { next(); }
+            if (e.key === 'ArrowUp') { prev(); }
+        });
+
+        function activate(i) {
+            currentIndex = i;
+            const all = document.querySelectorAll('.step');
+            all.forEach((el, idx) => {
+                el.classList.remove('active'); el.classList.add('inactive');
+                el.setAttribute('aria-pressed', 'false');
+            });
+            const current = all[i];
+            current.classList.add('active');
+            current.classList.remove('inactive');
+            current.setAttribute('aria-pressed', 'true');
+
+            updateCard(i);
+            updateLineProgress();
+            // scroll timeline to keep active in view
+            const rect = current.getBoundingClientRect();
+            const wrapRect = timeline.getBoundingClientRect();
+            if (rect.top < wrapRect.top + 20 || rect.bottom > wrapRect.bottom - 20) {
+                timeline.scrollBy({ top: rect.top - wrapRect.top - 40, behavior: 'smooth' });
+            }
+        }
+
+        function updateCard(i) {
+            const s = steps[i];
+            cardTitle.innerHTML = `<span class="badge">${s.badge}</span> &nbsp; ${s.title}`;
+            cardText.textContent = s.text;
+            cardImage.src = s.img;
+            cardImage.alt = s.title;
+            cardLink.href = s.link || '#';
+            learnMore.href = s.more || '#';
+
+            // NEW: help link
+            const helpLinkEl = document.getElementById('helpLink');
+            if (helpLinkEl) {
+                if (s.help) {
+                    helpLinkEl.href = s.help;
+                    helpLinkEl.style.display = 'inline-block';
+                    helpLinkEl.title = 'دليل/مساعدة المنصة';
+                } else {
+                    helpLinkEl.style.display = 'none';
+                }
+            }
+
+            // show card with depth
+            card.classList.remove('visible');
+            setTimeout(() => card.classList.add('visible'), 80);
+        }
+
+        function updateLineProgress() {
+            const percent = ((currentIndex) / (steps.length - 1)) * 100;
+            lineProgress.style.height = percent + '%';
+        }
+
+        function next() {
+            const nxt = Math.min(steps.length - 1, currentIndex + 1);
+            activate(nxt);
+        }
+        function prev() {
+            const prev = Math.max(0, currentIndex - 1);
+            activate(prev);
+        }
+
+        // helper: truncate string
+        function truncate(str, n) {
+            return (str.length > n) ? str.substr(0, n - 1) + '…' : str;
+        }
+
+        // small SVGs for dot icons (as strings). You can replace with inline images if desired.
+        function getDotSVG(i) {
+            const icons = [
+                // 0: requirements (menu)
+                `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+       <path d="M3 12h18M3 6h18M3 18h18" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+     </svg>`,
+
+                // 1: design (layout)
+                `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+       <path d="M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+       <path d="M8 12h8M8 16h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+     </svg>`,
+
+                // 2: implementation (laptop with </>) — **معدلة هنا**
+                `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+       <!-- laptop frame -->
+       <rect x="2" y="4" width="20" height="12" rx="2" stroke="#fff" stroke-width="1.6" fill="none"/>
+       <!-- keyboard base -->
+       <path d="M2 18h20" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+       <!-- code symbol inside screen -->
+       <g transform="translate(0,0)">
+         <path d="M9.5 10.5L8 12l1.5 1.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+         <path d="M14.5 10.5L16 12l-1.5 1.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+         <path d="M11 9v6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+       </g>
+     </svg>`,
+
+                // 3: testing (check)
+                `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+       <path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+     </svg>`,
+
+                // 4: deploy (star)
+                `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+       <path d="M12 2l3 6 6 .5-4.5 4 1 6L12 16 6.5 19.5 7.5 13 3 9l6-.5L12 2z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+     </svg>`
+            ];
+            return icons[i] || icons[0];
+        }
+
+        // init: focus first step for keyboard users
+        setTimeout(() => {
+            const first = document.querySelector('.step');
+            if (first) first.focus();
+            card.classList.add('visible');
+        }, 300);
+    </script>
+</body>
+
+</html>
